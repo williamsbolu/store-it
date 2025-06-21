@@ -10,7 +10,13 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends(
+    "next/core-web-vitals",
+    "next/typescript",
+    "plugin:tailwindcss/recommended"
+  ),
 ];
 
 export default eslintConfig;
+
+// added this: "plugin:tailwindcss/recommended" for eslint support for tailwindcss by installing as devdependency: "eslint-plugin-tailwindcss"

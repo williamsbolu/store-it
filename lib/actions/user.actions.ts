@@ -6,6 +6,7 @@ import { appwriteConfig } from "../appwrite/config";
 import { avatarPlaceholderUrl } from "@/constants";
 import { parseStringify } from "../utils";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 // server so we dont expose our security key
 
@@ -56,6 +57,7 @@ export const createAccount = async ({
   if (!existingUser) {
     const { databases } = await createAdminClient();
 
+    // ? What i can do later for the functionality is to create the user on the verifySecret() function afer veryfying the user.
     await databases.createDocument(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
@@ -100,19 +102,55 @@ export const verifySecret = async ({
 };
 
 export const getCurrentUser = async () => {
-  const { account, databases } = await createSessionClient();
+  try {
+    const { account, databases } = await createSessionClient();
 
-  const result = await account.get();
+    const result = await account.get();
 
-  const user = await databases.listDocuments(
-    appwriteConfig.databaseId,
-    appwriteConfig.usersCollectionId,
-    [Query.equal("accountId", result.$id)]
-  );
+    const user = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      [Query.equal("accountId", result.$id)]
+    );
 
-  if (user.total <= 0) {
+    if (user.total <= 0) {
+      return null;
+    }
+
+    return parseStringify(user.documents[0]);
+  } catch (error) {
+    console.log("Failed to get current user", error);
     return null;
   }
+};
 
-  return parseStringify(user.documents[0]);
+export const signOutUser = async () => {
+  const { account } = await createSessionClient();
+
+  try {
+    account.deleteSession("current");
+
+    // delete from the cookies too
+    (await cookies()).delete("appwrite-session");
+  } catch (err) {
+    handleError(err, "Failed to sign out user");
+  } finally {
+    redirect("/sign-in");
+  }
+};
+
+export const signInUser = async ({ email }: { email: string }) => {
+  try {
+    const existingUser = await getUserByEmail(email);
+
+    // if user exists, send an email OTP
+    if (existingUser) {
+      await sendEmailOTP({ email });
+      return parseStringify({ accountId: existingUser.accountId });
+    }
+
+    return parseStringify({ accountId: null, error: "User not found" });
+  } catch (err) {
+    handleError(err, "Failed to sign in user");
+  }
 };

@@ -17,7 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { createAccount } from "@/lib/actions/user.actions";
+import { createAccount, signInUser } from "@/lib/actions/user.actions";
 import OtpModal from "./OtpModal";
 
 type FormType = "sign-in" | "sign-up";
@@ -51,12 +51,19 @@ const AuthForm = ({ type }: { type: FormType }) => {
     setErrorMessage("");
 
     try {
-      const user = await createAccount({
-        fullName: values.fullName || "",
-        email: values.email,
-      });
+      const user =
+        type === "sign-up"
+          ? await createAccount({
+              fullName: values.fullName || "",
+              email: values.email,
+            })
+          : await signInUser({ email: values.email });
 
-      setAccountId(user.accountId);
+      if (user.accountId) {
+        setAccountId(user.accountId);
+      } else {
+        setErrorMessage(user.error || "An unexpected error occurred.");
+      }
     } catch {
       setErrorMessage("Failed to create account. Please try again.");
     } finally {
@@ -104,7 +111,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
                   <FormLabel className="shad-form-label">Email</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Etner your email"
+                      placeholder="Enter your email"
                       className="shad-input"
                       {...field}
                     />

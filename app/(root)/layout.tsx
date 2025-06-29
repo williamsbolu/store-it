@@ -4,6 +4,8 @@ import Sidebar from "@/components/Sidebar";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic"; // to prevent production build errors because of the cookie used on this file "getCurrentUser"
+
 const layout = async ({ children }: { children: React.ReactNode }) => {
   const currentUser = await getCurrentUser();
 

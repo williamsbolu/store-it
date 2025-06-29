@@ -22,10 +22,16 @@ interface Props {
   avatar: string;
   email: string;
   accountId: string;
-  ownerId: string;
+  $id: string;
 }
 
-const MobileNavigation = ({ fullName, email, avatar }: Props) => {
+const MobileNavigation = ({
+  fullName,
+  email,
+  avatar,
+  accountId,
+  $id: ownerId,
+}: Props) => {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -97,7 +103,7 @@ const MobileNavigation = ({ fullName, email, avatar }: Props) => {
           <Separator className="my-5 bg-light-200/20" />
 
           <div className="flex flex-col justify-between gap-5 pb-5">
-            <FileUploader />
+            <FileUploader accountId={accountId} ownerId={ownerId} />
 
             <Button
               type="submit"

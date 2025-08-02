@@ -1,6 +1,6 @@
 "use server";
 
-import { createAdminClient } from "../appwrite";
+import { createAdminClient, createSessionClient } from "../appwrite";
 import { InputFile } from "node-appwrite/file";
 import { appwriteConfig } from "../appwrite/config";
 import { ID, Models, Query } from "node-appwrite";
@@ -178,6 +178,23 @@ export const deleteFile = async ({
   const { databases, storage } = await createAdminClient();
 
   try {
+    // Runs a server check to know if the user is the owner of the file
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not authenticated.");
+
+    // Fetch the file document to check ownership
+    const fileDoc = await databases.getDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.filesCollectionId,
+      fileId
+    );
+
+    console.log({ file: fileDoc.owner.$id, userId: fileDoc.owner.$id });
+
+    if (fileDoc.owner.$id !== currentUser.$id) {
+      throw new Error("You are not authorized to delete this file.");
+    }
+
     const deletedFile = await databases.deleteDocument(
       appwriteConfig.databaseId,
       appwriteConfig.filesCollectionId,
@@ -194,3 +211,51 @@ export const deleteFile = async ({
     handleError(error, "Failed to delete file");
   }
 };
+
+// ============================== TOTAL FILE SPACE USED
+export async function getTotalSpaceUsed() {
+  try {
+    // Remember this was done later, after finishing the project 🥲
+    const { databases } = await createSessionClient();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User is not authenticated.");
+
+    const files = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.filesCollectionId,
+      [
+        Query.or([
+          Query.equal("owner", [currentUser.$id]),
+          Query.contains("users", [currentUser.email]),
+        ]),
+      ]
+    );
+
+    const totalSpace = {
+      image: { size: 0, latestDate: "" },
+      document: { size: 0, latestDate: "" },
+      video: { size: 0, latestDate: "" },
+      audio: { size: 0, latestDate: "" },
+      other: { size: 0, latestDate: "" },
+      used: 0,
+      all: 2 * 1024 * 1024 * 1024 /* 2GB available bucket storage */,
+    };
+
+    files.documents.forEach((file) => {
+      const fileType = file.type as FileType;
+      totalSpace[fileType].size += file.size;
+      totalSpace.used += file.size;
+
+      if (
+        !totalSpace[fileType].latestDate ||
+        new Date(file.$updatedAt) > new Date(totalSpace[fileType].latestDate)
+      ) {
+        totalSpace[fileType].latestDate = file.$updatedAt;
+      }
+    });
+
+    return parseStringify(totalSpace);
+  } catch (error) {
+    handleError(error, "Error calculating total space used:, ");
+  }
+}

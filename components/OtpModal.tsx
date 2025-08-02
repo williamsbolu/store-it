@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/input-otp";
 import { Button } from "./ui/button";
 import { verifySecret, sendEmailOTP } from "@/lib/actions/user.actions";
+import { toast } from "sonner";
 
 const OtpModal = ({
   accountId,
@@ -44,6 +45,7 @@ const OtpModal = ({
       if (sessionId) router.push("/");
     } catch (error) {
       console.log("Failed to verify otp", error);
+      toast.error("Invalid token!");
     } finally {
       setIsLoading(false);
     }

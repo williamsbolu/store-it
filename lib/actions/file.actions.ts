@@ -189,8 +189,6 @@ export const deleteFile = async ({
       fileId
     );
 
-    console.log({ file: fileDoc.owner.$id, userId: fileDoc.owner.$id });
-
     if (fileDoc.owner.$id !== currentUser.$id) {
       throw new Error("You are not authorized to delete this file.");
     }
